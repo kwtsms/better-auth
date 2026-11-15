@@ -51,6 +51,10 @@ import {
 } from "./par";
 import { registerEndpoint } from "./register";
 import {
+	ACCESS_TOKEN_FORMATS,
+	isAccessTokenFormat,
+	isJwsAlgorithm,
+	JWS_ALGORITHMS,
 	logEnforcePerClientResourcesResolution,
 	logStartupSeedFailure,
 	seedResourcesOnce,
@@ -260,6 +264,33 @@ export const oauthProvider = <O extends OAuthOptions<Scope[]>>(options: O) => {
 	if (opts.accessTokenSubject === "pairwise" && !opts.pairwiseSecret) {
 		throw new BetterAuthError(
 			'accessTokenSubject: "pairwise" requires pairwiseSecret',
+		);
+	}
+
+	const resourceDefaults = opts.resourceDefaults;
+	if (
+		resourceDefaults?.accessTokenFormat !== undefined &&
+		!isAccessTokenFormat(resourceDefaults.accessTokenFormat)
+	) {
+		throw new BetterAuthError(
+			`resourceDefaults.accessTokenFormat must be one of ${ACCESS_TOKEN_FORMATS.join(", ")}`,
+		);
+	}
+	if (
+		resourceDefaults?.signingAlgorithm !== undefined &&
+		!isJwsAlgorithm(resourceDefaults.signingAlgorithm)
+	) {
+		throw new BetterAuthError(
+			`resourceDefaults.signingAlgorithm must be one of ${JWS_ALGORITHMS.join(", ")}`,
+		);
+	}
+	if (
+		opts.disableJwtPlugin &&
+		(resourceDefaults?.signingAlgorithm !== undefined ||
+			resourceDefaults?.signingKeyId !== undefined)
+	) {
+		throw new BetterAuthError(
+			"resourceDefaults.signingAlgorithm and resourceDefaults.signingKeyId sign JWT access tokens, which disableJwtPlugin turns off",
 		);
 	}
 

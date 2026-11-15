@@ -1228,6 +1228,22 @@ export interface OAuthOptions<
 	 */
 	resourceSeedMode?: "insertOnly" | "merge" | "overwrite";
 	/**
+	 * Access-token format and signing for resources that do not set their own.
+	 * A resource's `accessTokenFormat` replaces the default format. A resource
+	 * that sets `signingAlgorithm` or `signingKeyId` replaces both signing
+	 * defaults. Requests without a `resource` still receive opaque tokens.
+	 *
+	 * @example
+	 * ```ts
+	 * resourceDefaults: { signingAlgorithm: "EdDSA" },
+	 * resources: [
+	 *   { identifier: "https://internal.example.com", accessTokenFormat: "opaque" },
+	 *   { identifier: "https://payments.example.com", signingAlgorithm: "ES256" },
+	 * ]
+	 * ```
+	 */
+	resourceDefaults?: OAuthResourceDefaults;
+	/**
 	 * Opt-in cache membership for resources by `identifier`. Mirrors the
 	 * {@link OAuthOptions.cachedTrustedClients} pattern.
 	 *
@@ -2446,6 +2462,39 @@ export interface OAuthAuthorizationQuery {
 }
 
 /**
+ * Format of an access token issued for a resource. A `"jwt"` token is
+ * self-contained and verifiable with the provider's JWKS; an `"opaque"` token
+ * is a reference that resource servers check through introspection.
+ */
+export type AccessTokenFormat = "jwt" | "opaque";
+
+/**
+ * Token policy applied to every resource that does not set its own value.
+ * Field names match {@link OAuthResourceInput}.
+ */
+export interface OAuthResourceDefaults {
+	/**
+	 * Format of access tokens issued for a resource.
+	 *
+	 * @default "jwt"
+	 */
+	accessTokenFormat?: AccessTokenFormat;
+	/**
+	 * Signing algorithm for JWT access tokens. ID tokens keep the JWT plugin's
+	 * primary key. The JWT plugin must have a key for this algorithm, for
+	 * example through `jwks.keyPairConfigs`.
+	 *
+	 * @default the JWT plugin's primary key algorithm
+	 */
+	signingAlgorithm?: JWSAlgorithms;
+	/**
+	 * JWKS key id for JWT access tokens. ID tokens keep the JWT plugin's
+	 * primary key.
+	 */
+	signingKeyId?: string;
+}
+
+/**
  * A persisted protected-resource row as stored in `oauthResource`.
  *
  * `null` on any policy column means "inherit the plugin-level default at
@@ -2464,8 +2513,21 @@ export interface OAuthResource {
 	accessTokenTtl?: number | null;
 	/** Refresh token TTL in seconds; null inherits {@link OAuthOptions.refreshTokenExpiresIn} */
 	refreshTokenTtl?: number | null;
-	/** When set, overrides the JWT plugin's getLatestKey() default at signing time. */
+	/**
+	 * Format of access tokens issued for this resource; null inherits
+	 * {@link OAuthOptions.resourceDefaults}, then `"jwt"`.
+	 */
+	accessTokenFormat?: AccessTokenFormat | null;
+	/**
+	 * Signing algorithm for JWT access tokens issued for this resource; null
+	 * inherits {@link OAuthOptions.resourceDefaults}, then the JWT plugin's
+	 * primary key.
+	 */
 	signingAlgorithm?: JWSAlgorithms | null;
+	/**
+	 * JWKS key id for JWT access tokens issued for this resource; null inherits
+	 * {@link OAuthOptions.resourceDefaults}, then the JWT plugin's primary key.
+	 */
 	signingKeyId?: string | null;
 	/**
 	 * When non-null, requested scopes must intersect this set or the request is
@@ -2510,6 +2572,14 @@ export interface OAuthResourceInput {
 	name?: string;
 	accessTokenTtl?: number;
 	refreshTokenTtl?: number;
+	/**
+	 * Issue self-contained JWT access tokens (`"jwt"`) or opaque reference
+	 * tokens that resource servers check through introspection (`"opaque"`).
+	 * Both keep the resource as the token audience.
+	 *
+	 * @default resourceDefaults.accessTokenFormat, then "jwt"
+	 */
+	accessTokenFormat?: AccessTokenFormat;
 	signingAlgorithm?: JWSAlgorithms;
 	signingKeyId?: string;
 	allowedScopes?: string[];

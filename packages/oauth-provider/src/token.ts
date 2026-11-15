@@ -1020,6 +1020,7 @@ interface ResourceGrantIssuance {
 	refreshResources?: string[];
 	signingAlgorithm: ResolvedResourcePolicy["signingAlgorithm"];
 	signingKeyId: ResolvedResourcePolicy["signingKeyId"];
+	accessTokenFormat: ResolvedResourcePolicy["accessTokenFormat"];
 	resourceCustomClaims: Record<string, unknown>;
 	dpopBoundAccessTokensRequired: boolean;
 }
@@ -1066,6 +1067,7 @@ async function resolveResourceGrantIssuance(
 			params.resources,
 		signingAlgorithm: resourcePolicy.signingAlgorithm,
 		signingKeyId: resourcePolicy.signingKeyId,
+		accessTokenFormat: resourcePolicy.accessTokenFormat,
 		resourceCustomClaims: resourcePolicy.rawCustomClaims,
 		dpopBoundAccessTokensRequired: resourcePolicy.dpopBoundAccessTokensRequired,
 	};
@@ -1567,7 +1569,10 @@ async function createUserTokens(
 		clientAllowsGrant(client, "refresh_token") &&
 		(existingRefreshToken?.scopes?.includes("offline_access") ||
 			scopes.includes("offline_access"));
-	const isJwtAccessToken = audienceClaim && !opts.disableJwtPlugin;
+	const isJwtAccessToken =
+		audienceClaim &&
+		grantIssuance.accessTokenFormat === "jwt" &&
+		!opts.disableJwtPlugin;
 	// Kept across rotations, so revoking any refresh token of the grant can
 	// revoke the access tokens it issued. A legacy row without one starts a new
 	// grant ID here. A grant from an authorization code takes its ID from the
