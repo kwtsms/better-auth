@@ -82,6 +82,7 @@ import {
 	isConfirmation,
 	isPKCERequired,
 	isPublicClient,
+	JWT_ACCESS_TOKEN_TYPE,
 	normalizeTimestampValue,
 	parseClientMetadata,
 	resolveAccessTokenSubject,
@@ -111,8 +112,6 @@ const ID_TOKEN_SCOPE_CLAIM_GUARDS: Record<string, undefined> =
 export function confirmationTokenType(confirmation?: Confirmation): TokenType {
 	return getConfirmationJkt(confirmation) ? "DPoP" : "Bearer";
 }
-
-const JWT_ACCESS_TOKEN_TYPE = "at+jwt";
 
 /**
  * Handles the /oauth2/token endpoint by delegating

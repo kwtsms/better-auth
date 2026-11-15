@@ -78,11 +78,12 @@ The defaults come from your auth server's resolved base URL. That URL includes `
 * `issuer` defaults to `jwt.issuer` when the JWT plugin sets it. Otherwise, it defaults to the base URL, which matches the issuer the provider signs.
 * Without `jwksUrl`, the signing keys are read from the auth instance in-process, with no request to its own `/jwks` endpoint. When the JWT plugin sets `jwks.remoteUrl`, the keys are fetched from that URL instead. Set `jwksUrl` to fetch them from another URL. With `disableJwtPlugin`, the provider issues only opaque access tokens, which have no signing keys to read, so verify them with `remoteVerify`, as shown in [JWT or opaque tokens](#jwt-or-opaque-tokens).
 * `audience` defaults to the base URL. See the warning below.
+* `typ` defaults to `at+jwt`, so only JWT access tokens pass ([RFC 9068 §4](https://datatracker.ietf.org/doc/html/rfc9068#section-4)). jose compares it as a media type, so `application/at+jwt` in any letter case also matches. Set `verifyOptions.typ` only to accept tokens from another issuer that uses a different value.
 
 With a dynamic `baseURL`, the base URL is known only per request, so nothing defaults to it. `jwt.issuer` and `jwks.remoteUrl` still apply when the JWT plugin sets them. Pass `audience`, and any of `issuer` and `jwksUrl` the JWT plugin does not set, explicitly.
 
 <Callout type="warn">
-  Do not rely on the default audience. It is the auth server's URL, not your API's identifier, and it is also the default `aud` of [JWT plugin](/docs/plugins/jwt#oauth-provider-mode) session JWTs. With the defaults, a signed-in user's session JWT can pass as an access token. Set `audience` to your API's resource identifier, and add `typ: "at+jwt"` and `requiredClaims: ["azp"]`.
+  Do not rely on the default audience. It is the auth server's URL, not your API's identifier, and it is also the default `aud` of [JWT plugin](/docs/plugins/jwt#oauth-provider-mode) session JWTs. Set `audience` to your API's resource identifier, so a token issued for another API on the same issuer does not pass at yours.
 </Callout>
 
 ```ts title="api/posts.ts"
@@ -95,8 +96,6 @@ export const POST = async (req: Request) => {
       verifyOptions: {
         issuer: "https://auth.example.com/api/auth",
         audience: "https://api.example.com",
-        typ: "at+jwt",
-        requiredClaims: ["azp"],
       },
       jwksUrl: "https://auth.example.com/api/auth/jwks",
       requiredScopes: ["write:post"],
