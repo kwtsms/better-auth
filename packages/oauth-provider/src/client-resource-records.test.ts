@@ -420,6 +420,36 @@ describe("resource client with pairwise access token subjects", async () => {
 		expect(payload.sub).toBe(tokenSub);
 		expect(payload).not.toHaveProperty("ba_sub");
 	});
+
+	it("keeps the client ID as the sub of a pairwise client's own token", async () => {
+		const pairwiseMachine = await server.auth.api.adminCreateOAuthClient({
+			headers: (await server.signInWithTestUser()).headers,
+			body: {
+				token_endpoint_auth_method: "client_secret_post",
+				grant_types: ["client_credentials"],
+				client_credentials_scopes: ["read:posts"],
+				subject_type: "pairwise",
+				redirect_uris: [redirectUri],
+			},
+		});
+		const { access_token } = await server.auth.api.oauth2Token({
+			body: {
+				grant_type: "client_credentials",
+				client_id: pairwiseMachine.client_id,
+				client_secret: pairwiseMachine.client_secret,
+				scope: "read:posts",
+				resource,
+			},
+		});
+		const tokenSub = decodeJwt(access_token).sub;
+
+		const payload = await server.resourceClient.verifyAccessTokenRequest(
+			await routeRequest(access_token),
+			{ verifyOptions },
+		);
+
+		expect(payload.sub).toBe(tokenSub);
+	});
 });
 
 describe("resource client with opaque access tokens in this process", async () => {
